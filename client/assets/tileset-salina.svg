@@ -1,0 +1,6 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="256" height="64" viewBox="0 0 256 64">
+<!-- Arte vetorial própria: areia, caminho e mar, células de 16 pixels. -->
+<path fill="#ead7ac" d="M0 0h16v16H0z"/><path fill="#d5bd8d" d="M3 4h2v1H3zm8 7h2v1h-2z"/>
+<path fill="#c5a774" d="M16 0h16v16H16z"/><path fill="#d4b985" d="M16 5h16v2H16zm0 8h16v1H16z"/>
+<path fill="#369cae" d="M32 0h16v16H32z"/><path fill="none" stroke="#79c9d0" d="M33 4h7m3 6h4m-13 3h6"/>
+</svg>

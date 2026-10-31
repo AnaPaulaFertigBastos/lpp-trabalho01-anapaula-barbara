@@ -3,10 +3,10 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
-  <title>Vila em Tempo Real</title>
+  <title>Vila Salina</title>
   <style>
-    body { font-family: system-ui, sans-serif; max-width: 580px; margin: 24px auto; padding: 0 12px; }
-    .cartao, .painel { border: 1px solid #ccc; border-radius: 8px; padding: 12px; margin: 12px 0; }
+    body { background: #f8f4ea; color: #183d44; font-family: system-ui, sans-serif; max-width: 580px; margin: 24px auto; padding: 0 12px; }
+    .cartao, .painel { background: #fffdf7; border: 1px solid #ccc; border-radius: 8px; padding: 12px; margin: 12px 0; }
     .painel p { margin: 6px 0; }
     button { padding: 8px 14px; margin-right: 6px; border-radius: 6px; border: 1px solid #888; cursor: pointer; }
     input { padding: 8px; margin-bottom: 8px; width: 100%; box-sizing: border-box; }
@@ -43,25 +43,33 @@
 
   <!-- Tela de entrada -->
   <section v-if="!conectado" class="cartao">
-    <h1>🏘️ Vila em Tempo Real</h1>
+    <h1>🌊 Vila Salina</h1>
     <input v-model="nome" placeholder="Seu nome">
     <button @click="entrar('mestre')">Entrar como Mestre</button>
     <button @click="entrar('jogador')">Entrar como Jogador</button>
+    <p v-if="erroConexao" role="alert">{{ erroConexao }}</p>
   </section>
 
   <!-- Tela da vila -->
   <main v-else>
-    <h1>🏘️ Vila</h1>
+    <h1>🌊 Vila Salina</h1>
     <p>{{ papel }}: <strong>{{ nome || "Anônimo" }}</strong> · Temporada: <strong>{{ estado.fase }}</strong></p>
 
     <!-- A vila desenhada pelo Phaser aparece aqui -->
     <div id="jogo"></div>
 
     <section class="painel">
-      <p>🪵 Toras: <strong>{{ estado.toras }}</strong> (+{{ porMinuto }}/min)</p>
-      <p>👷 Trabalhadores: {{ estado.trabalhadores }}/{{ estado.limite }}
+      <p>Água do mar: <strong>{{ estado.agua_mar }}</strong></p>
+      <p>Sal total: <strong>{{ estado.sal }}</strong></p>
+      <p>Sal protegido: {{ estado.sal_protegido }}/{{ estado.capacidade_deposito }} · Exposto: {{ estado.sal_exposto }}</p>
+      <p>Sal perdido na temporada: {{ estado.sal_perdido }}</p>
+      <p>O depósito protege os {{ estado.capacidade_deposito }} mais antigos. O excedente fica exposto à chuva.</p>
+      <p>Capacidade por ciclo de {{ estado.intervalo }}s: capta {{ estado.captacao }} de água, consome {{ estado.consumo_agua }} e produz {{ estado.producao }} de sal ({{ porMinuto }}/min enquanto aberta).</p>
+      <p>Chuva: a cada {{ estado.intervalo_chuva }}s após a abertura. <strong>{{ previsaoChuva }}</strong></p>
+      <p>👷 Salineiros ocupados: {{ estado.trabalhadores }}/{{ estado.limite }}
         <progress :value="estado.trabalhadores" :max="estado.limite"></progress></p>
-      <p>🏠 Construções: {{ estado.concluidas }} concluídas, {{ estado.em_obra }} em obra</p>
+      <p>Unidades salineiras: {{ estado.concluidas }} concluídas, {{ estado.em_obra }} em obra · Limite: {{ estado.limite_construcoes }}</p>
+      <p>Duração de cada obra: {{ estado.tempo_obra }}s.</p>
     </section>
 
     <section>
@@ -69,7 +77,7 @@
         <button @click="abrirVila">Abrir temporada</button>
         <button @click="encerrarVila">Encerrar temporada</button>
       </template>
-      <button v-else @click="construir">🔨 Construir (custo {{ estado.custo }} toras)</button>
+      <button v-else @click="construir">🔨 Construir (custo {{ estado.custo }} de sal)</button>
     </section>
 
     <ul class="avisos">
@@ -83,11 +91,11 @@
         <span class="badge emit">⬆ emit</span> este cliente PEDIU algo ao servidor ·
         <span class="badge on">⬇ on</span> este cliente ESCUTOU um evento e reagiu
       </p>
-      <!-- ETAPA 7 (dupla): cole aqui os contadores por evento -->
-       <div class="contadores">
-        <span v-for="(n, nome) in contadores" class="chip">{{ nome }} ×{{ n }}</span>
+      <!-- Etapa 7: contagem local de envios e recebimentos, independente do filtro. -->
+      <div class="contadores" role="group" aria-label="Contadores por evento">
+        <span v-for="(n, nome) in contadores" :key="nome" class="chip">{{ nome }} ×{{ n }}</span>
       </div>
-
+      <p class="legenda">Contagens desta conexão. O filtro não altera os totais; reconectar reinicia a contagem.</p>
       <label><input type="checkbox" v-model="ocultarProducao"> ocultar recurso.produzido (é muito frequente)</label>
       <ul>
         <li v-for="e in eventosVisiveis" :class="e.tipo">
@@ -102,7 +110,7 @@
     </section>
   </main>
 
-  <footer>Desenvolvido por: [Nome do(a) Aluno(a)]</footer>
+  <footer>Desenvolvido por: Ana Paula Fertig Bastos e Bárbara Cristina Kammer</footer>
 </div>
 
 <script src="https://unpkg.com/vue@3.5.13/dist/vue.global.js"></script>
@@ -111,10 +119,10 @@
 
 <script>
   // =====================================================================
-  //  A VILA DESENHADA (Phaser) - já vem pronta, você NÃO precisa alterar.
+  //  Cenário da Salina: mapa Tiled e formas próprias para tanques e secagem.
   //  O cenário é um MAPA (Tilemap) feito no Tiled: client/assets/vila.json.
   //  Cada método abaixo reage a UM evento do servidor.
-  //  Seu trabalho é chamar o método certo dentro de cada socket.on(...).
+  //  As animações apresentam fatos; não decidem produção ou perda.
   // =====================================================================
   function criarJogo() {
     let cena = null;          // a cena, quando já estiver pronta
@@ -126,9 +134,7 @@
       constructor() { super("vila"); }
 
       preload() {
-        this.load.image("tiles", "assets/tileset-vila.png");                 // peças do cenário
-        this.load.spritesheet("sprites", "assets/sprites-vila.png",          // casa e canteiro
-          { frameWidth: 32, frameHeight: 32 });
+        this.load.image("tiles", "assets/tileset-salina.svg");                 // peças do cenário
         this.load.tilemapTiledJSON("mapa", "assets/vila.json");              // o mapa
       }
 
@@ -139,11 +145,22 @@
         mapa.createLayer("chao", tileset);
         mapa.createLayer("decoracao", tileset);
 
-        // 2) pontos marcados no mapa: onde ficam as obras e o acampamento de lenha
+        // 2) pontos marcados no mapa: onde ficam as unidades e o depósito
         const pontos = mapa.getObjectLayer("pontos").objects;
         this.lotes = pontos.filter((p) => p.name.startsWith("lote"))
           .sort((a, b) => a.name.localeCompare(b.name, "pt", { numeric: true }));
-        this.acampamento = pontos.find((p) => p.name === "acampamento");
+        this.acampamento = pontos.find((p) => p.name === "deposito");
+        this.add.rectangle(28, 42, 42, 26, 0xb98754).setStrokeStyle(2, 0x735335);
+        this.add.rectangle(28, 43, 32, 16, 0xfffbef);
+        this.add.text(28, 62, "DEPÓSITO", {fontSize: "6px", resolution: 2, color: "#473422"}).setOrigin(0.5);
+        this.add.text(258, 68, "MAR", {fontSize: "8px", color: "#ffffff"}).setOrigin(0.5);
+        this.add.text(28, 118, "FRENTE BÁSICA", {fontSize: "6px", resolution: 2, color: "#473422"}).setOrigin(0.5);
+        this.desenharUnidade(28, 98);
+        for (const p of this.lotes) {
+          this.add.rectangle(p.x, p.y, 36, 28, 0xf7ead1).setStrokeStyle(1, 0xc5aa7a);
+          this.add.text(p.x, p.y + 21, "UNIDADE " + p.name.slice(4), {fontSize: "6px", resolution: 2, color: "#584326"}).setOrigin(0.5);
+        }
+        this.add.text(144, 136, "Cada unidade: tanque + secagem", {fontSize: "7px", resolution: 2, color: "#473422"}).setOrigin(0.5);
 
         // 3) câmera: o mapa é pequeno (pixel art), então damos zoom 2x
         this.cameras.main.setZoom(2).centerOn(mapa.widthInPixels / 2, mapa.heightInPixels / 2);
@@ -151,6 +168,7 @@
         this.alt = mapa.heightInPixels;
 
         this.obras = [];      // obras em andamento (a primeira a começar é a primeira a terminar)
+        this.casas = [];
         this.usados = 0;      // quantos lotes já foram usados
         this.faixa = this.add.text(this.larg / 2, 9, "⏳ Aguardando o Mestre", {
           fontSize: "8px", color: "#ffffff", backgroundColor: "#00000099",
@@ -163,18 +181,28 @@
 
       // ----- apoio -----
       lote(i) { return this.lotes[i % this.lotes.length]; }
+      desenharUnidade(x, y) {
+        const tanque = this.add.rectangle(-9, 0, 14, 22, 0x5cb8c6).setStrokeStyle(2, 0x708b87);
+        const secagem = this.add.rectangle(9, 0, 14, 22, 0xf6f6ed).setStrokeStyle(2, 0xb79b6a);
+        const sal = this.add.triangle(9, 2, 0, 8, 5, 0, 10, 8, 0xffffff);
+        return this.add.container(x, y, [tanque, secagem, sal]);
+      }
       criarCasa(x, y) {
-        const casa = this.add.sprite(x, y, "sprites", 0);
+        const casa = this.desenharUnidade(x, y);
+        this.casas.push(casa);
         this.tweens.add({ targets: casa, scale: { from: 0.3, to: 1 }, duration: 400, ease: "Back.Out" });
       }
-      criarObra(duracao) {
-        const { x, y } = this.lote(this.usados++);
-        const canteiro = this.add.sprite(x, y, "sprites", 1);
+      criarObra(duracao, construcao = null) {
+        const { x, y } = this.lote(construcao ? construcao.espaco - 1 : this.usados++);
+        const base = this.add.rectangle(0, 0, 32, 22, 0xd0ae75).setStrokeStyle(2, 0x8b6636);
+        const sinal = this.add.text(0, 0, "OBRA", {fontSize: "7px", resolution: 2, color: "#513819"}).setOrigin(0.5);
+        const canteiro = this.add.container(x, y, [base, sinal]);
         const fundo = this.add.rectangle(x - 10, y + 16, 20, 3, 0x333333).setOrigin(0, 0.5);
         const barra = this.add.rectangle(x - 10, y + 16, 20, 3, 0xffd54a).setOrigin(0, 0.5);
-        barra.scaleX = 0;
-        this.tweens.add({ targets: barra, scaleX: 1, duration: duracao });
-        this.obras.push({ canteiro, fundo, barra, x, y });
+        const restante = construcao ? Math.max(0, construcao.conclusao_prevista * 1000 - Date.now()) : duracao;
+        barra.scaleX = duracao ? Math.max(0, Math.min(1, 1 - restante / duracao)) : 1;
+        if (restante > 0) this.tweens.add({ targets: barra, scaleX: 1, duration: restante });
+        this.obras.push({ id: construcao?.id, construcao, canteiro, fundo, barra, x, y });
       }
       flutuar(texto, x, y, cor) {
         const t = this.add.text(x, y, texto, {
@@ -186,38 +214,74 @@
 
       // ----- um método para cada evento do servidor -----
       mostrarEstado(estado) {                 // estado.sincronizado
-        for (let i = 0; i < estado.concluidas; i++) {
-          const p = this.lote(this.usados++);
-          this.criarCasa(p.x, p.y);
+        // Reconexão substitui os desenhos anteriores, sem duplicar canteiros.
+        for (const objeto of [...this.casas, ...this.obras.flatMap(o => [o.canteiro, o.fundo, o.barra])]) {
+          this.tweens.killTweensOf(objeto);
+          objeto.destroy();
         }
-        for (let i = 0; i < estado.em_obra; i++) this.criarObra(estado.tempo_obra * 1000);
+        if (this.sombraFinal) { this.sombraFinal.destroy(); this.sombraFinal = null; }
+        this.casas = [];
+        this.obras = [];
+        this.usados = 0;
+        for (const construcao of estado.construcoes || []) {
+          if (construcao.situacao === "em_obra") this.criarObra(estado.tempo_obra * 1000, construcao);
+          else {
+            const p = this.lote(construcao.espaco - 1);
+            this.criarCasa(p.x, p.y);
+          }
+        }
+        if (estado.fase === "aguardando") this.faixa.setText("⏳ Aguardando o Mestre");
         if (estado.fase === "aberta") this.vilaIniciada();
-        if (estado.fase === "encerrada") this.vilaEncerrada();
+        if (estado.fase === "encerrada") this.vilaEncerrada(estado);
       }
       vilaIniciada() {                        // vila.iniciada
         this.faixa.setText("☀️ Temporada aberta");
       }
-      obraIniciada(estado) {                  // construcao.iniciada
-        this.criarObra(estado.tempo_obra * 1000);
-        this.flutuar("-" + estado.custo + " 🪵", this.acampamento.x, this.acampamento.y, "#b00020");
+      obraIniciada(estado, construcao) {                  // construcao.iniciada
+        this.criarObra(estado.tempo_obra * 1000, construcao);
+        this.flutuar("-" + estado.custo + " sal", this.acampamento.x, this.acampamento.y, "#b00020");
       }
-      obraConcluida(estado) {                 // construcao.concluida
-        const obra = this.obras.shift();
-        if (!obra) return;
+      obraConcluida(estado, construcao) {                 // construcao.concluida
+        const indice = this.obras.findIndex(o => o.id === construcao.id);
+        if (indice < 0) return;
+        const [obra] = this.obras.splice(indice, 1);
+        this.tweens.killTweensOf(obra.barra);
         obra.canteiro.destroy(); obra.fundo.destroy(); obra.barra.destroy();
         this.criarCasa(obra.x, obra.y);
-        this.flutuar("🏠 Obra concluída!", obra.x, obra.y - 18, "#1b5e20");
+        this.flutuar("Unidade pronta!", obra.x, obra.y - 18, "#1b5e20");
       }
-      recursoProduzido(estado) {              // recurso.produzido
-        this.flutuar("+" + estado.producao + " 🪵", this.acampamento.x, this.acampamento.y, "#1b5e20");
+      recursoProduzido(quantidade, recurso) {
+        this.flutuar("+" + quantidade + " " + recurso, recurso === "água" ? 255 : 35, 80, "#1b5e20");
+      }
+      chuvaOcorrida() {
+        // Efeito breve: a chuva é instantânea nas regras, sem pausar a produção.
+        const gotas = this.add.graphics().setDepth(6);
+        gotas.lineStyle(1, 0x547da8, 0.8);
+        for (let x = 4; x < this.larg; x += 12) {
+          for (let y = 0; y < this.alt; y += 22) gotas.lineBetween(x, y, x - 3, y + 8);
+        }
+        this.tweens.add({targets: gotas, y: 12, alpha: 0, duration: 1400, onComplete: () => gotas.destroy()});
+      }
+      salPerdido(quantidade) {
+        this.flutuar("Chuva: -" + quantidade + " sal exposto", this.larg / 2, 80, "#b00020");
       }
       recusado(motivo) {                      // operacao.recusada (só quem pediu)
         this.cameras.main.shake(180, 0.006);
         this.flutuar("✋ " + motivo, this.larg / 2, this.alt - 28, "#b00020");
       }
-      vilaEncerrada() {                       // vila.encerrada
+      vilaEncerrada(estado) {                       // vila.encerrada
         this.faixa.setText("🌙 Temporada encerrada");
-        this.add.rectangle(this.larg / 2, this.alt / 2, this.larg, this.alt, 0x000033, 0.35).setDepth(5);
+        for (const obra of this.obras) {
+          this.tweens.killTweensOf(obra.barra);
+          if (obra.construcao && estado.encerrada_em != null) {
+            const duracao = obra.construcao.conclusao_prevista - obra.construcao.iniciada_em;
+            obra.barra.scaleX = Math.max(0, Math.min(1,
+              (estado.encerrada_em - obra.construcao.iniciada_em) / duracao));
+          }
+        }
+        // Reconexões não acumulam camadas escuras sobre a vila.
+        if (!this.sombraFinal) this.sombraFinal = this.add.rectangle(
+          this.larg / 2, this.alt / 2, this.larg, this.alt, 0x000033, 0.35).setDepth(5);
       }
     }
 
@@ -226,7 +290,7 @@
         if (partida) return;
         partida = new Phaser.Game({
           type: Phaser.AUTO, parent: idContainer, width: 576, height: 288,
-          pixelArt: true, backgroundColor: "#7bb661", scene: VilaScene, audio: { noAudio: true },
+          pixelArt: true, backgroundColor: "#ead7ac", scene: VilaScene, audio: { noAudio: true },
         });
       },
       mostrarEstado: (...a) => chamar("mostrarEstado", ...a),
@@ -234,6 +298,8 @@
       obraIniciada: (...a) => chamar("obraIniciada", ...a),
       obraConcluida: (...a) => chamar("obraConcluida", ...a),
       recursoProduzido: (...a) => chamar("recursoProduzido", ...a),
+      chuvaOcorrida: (...a) => chamar("chuvaOcorrida", ...a),
+      salPerdido: (...a) => chamar("salPerdido", ...a),
       recusado: (...a) => chamar("recusado", ...a),
       vilaEncerrada: (...a) => chamar("vilaEncerrada", ...a),
     };
@@ -244,17 +310,27 @@
   // =====================================================================
   //  A APLICAÇÃO (Vue + Socket.IO) - é aqui que você trabalha.
   // =====================================================================
-  const { createApp, ref, reactive, computed, nextTick } = Vue;
+  const { createApp, ref, reactive, computed, nextTick, onUnmounted } = Vue;
 
   createApp({
     setup() {
       const nome = ref("");
       const papel = ref("");
       const conectado = ref(false);
+      const erroConexao = ref("");
       const estado = reactive({
-        fase: "aguardando", toras: 0, trabalhadores: 0, limite: 0,
+        fase: "aguardando", agua_mar: 0, sal: 0, sal_protegido: 0, sal_exposto: 0,
+        sal_perdido: 0, capacidade_deposito: 0, trabalhadores: 0, limite: 0,
+        captacao: 0, consumo_agua: 0, intervalo_chuva: 0, limite_construcoes: 0,
         producao: 0, intervalo: 0, tempo_obra: 0, custo: 0, concluidas: 0, em_obra: 0,
       });
+      const agora = ref(Date.now());
+      // Relógio somente de apresentação; os fatos continuam vindo do servidor.
+      const relogioTela = setInterval(() => { agora.value = Date.now(); }, 1000);
+      onUnmounted(() => clearInterval(relogioTela));
+      const previsaoChuva = computed(() => estado.fase === "aberta" && estado.proxima_chuva
+        ? "Próxima chuva em " + Math.max(0, Math.ceil(estado.proxima_chuva - agora.value / 1000)) + "s."
+        : estado.fase === "encerrada" ? "Não haverá novas chuvas." : "Aguardando abertura.");
       const avisos = ref([]);
       const eventos = ref([]);              // linha do tempo do painel de eventos
       const contadores = reactive({});      // quantas vezes cada evento ocorreu
@@ -273,6 +349,7 @@
       }
 
       function atualizar(d) {
+        agora.value = Date.now();
         Object.assign(estado, d.estado);   // copia o estado enviado pelo servidor
       }
 
@@ -280,12 +357,14 @@
       function resumir(d) {                // transforma os dados do evento em texto curto
         if (!d) return "";
         const { estado: e, causa, ...resto } = d;
-        const partes = Object.entries(resto).map(([k, v]) => k + ": " + v);
-        if (e) partes.push("toras " + e.toras + ", trabalhadores " + e.trabalhadores + "/" + e.limite);
+        const partes = Object.entries(resto).map(([k, v]) => k + ": " +
+          (typeof v === "object" ? JSON.stringify(v) : v));
+        if (e) partes.push("água " + e.agua_mar + ", sal " + e.sal + ", protegido " + e.sal_protegido +
+          ", exposto " + e.sal_exposto + ", salineiros " + e.trabalhadores + "/" + e.limite);
         return partes.join(" · ");
       }
       function registrar(sentido, nome, dados, reacao = "") {
-        const tipo = /_solicitad[ao]$/.test(nome) ? "pedido" : (nome === "operacao.recusada" ? "recusa" : "fato");
+        const tipo = /[._]solicitad[ao]$/.test(nome) ? "pedido" : (nome === "operacao.recusada" ? "recusa" : "fato");
         contadores[nome] = (contadores[nome] || 0) + 1;
         eventos.value.unshift({ hora: new Date().toLocaleTimeString(), sentido: sentido, nome, tipo,
           causa: (dados && dados.causa) || "", dados: resumir(dados), reacao });
@@ -294,7 +373,15 @@
 
       // OUVIR (on): registra o evento no painel e executa a reação do cliente
       function ouvir(nome, reacao, funcao) {
-        socket.on(nome, (d) => { registrar("recebido", nome, d, reacao); funcao(d); });
+        socket.on(nome, (d) => {
+          if (nome === "estado.sincronizado") {
+            avisos.value = [];
+            eventos.value = [];
+            Object.keys(contadores).forEach((chave) => delete contadores[chave]);
+          }
+          registrar("recebido", nome, d, reacao);
+          funcao(d);
+        });
       }
       // PEDIR (emit): registra o evento no painel e o envia ao servidor
       function pedir(nome, dados) {
@@ -303,8 +390,15 @@
       }
 
       function entrar(p) {
+        if (socket) socket.disconnect();
+        nome.value = nome.value.trim() || "Anônimo";
         papel.value = p;
-        socket = io({ auth: { nome: nome.value || "Anônimo", papel: p } });
+        erroConexao.value = "";
+        // Registra as escutas antes de conectar para não perder a sincronização.
+        socket = io({ autoConnect: false, auth: { nome: nome.value, papel: p } });
+        socket.on("connect_error", () => {
+          erroConexao.value = "Não foi possível conectar. Confira se o servidor está ativo e tente novamente.";
+        });
         socket.on("connect", () => {
           conectado.value = true;
           nextTick(() => jogo.iniciar("jogo"));   // a vila desenhada começa quando a tela aparece
@@ -312,71 +406,74 @@
 
         // ===== ESCUTAS (on): o cliente reage aos FATOS do servidor =====
         // ouvir(evento, "o que o cliente faz ao receber", função)
-        // ETAPA 1: ouvir "estado.sincronizado"   -> jogo.mostrarEstado(...)
-        ouvir("estado.sincronizado", "guarda o estado e desenha a vila", (d) => {
+        // O servidor envia o estado; o cliente apenas o apresenta e desenha.
+        ouvir("estado.sincronizado", "atualiza os estoques e desenha a Salina", (d) => {
           atualizar(d);
           jogo.mostrarEstado(d.estado);
         });
-
-        // ETAPA 2: ouvir "vila.iniciada"         -> jogo.vilaIniciada()
-        ouvir("vila.iniciada", "muda a faixa para temporada aberta", (d) => {
+        ouvir("vila.iniciada", "mostra a temporada aberta e atualiza a faixa da vila", (d) => {
           atualizar(d);
           avisar("A temporada começou!", "ok");
           jogo.vilaIniciada();
         });
-
-        // ETAPA 3: ouvir "construcao.iniciada"   -> jogo.obraIniciada(...)
-        ouvir("construcao.iniciada", "mostra o canteiro de obras", (d) => {
-          atualizar(d);
-          avisar(d.por + " iniciou uma obra");
-          jogo.obraIniciada(d.estado);
-        });
-        
-
-        // ETAPA 4: ouvir "operacao.recusada"     -> jogo.recusado(...)
-        ouvir("operacao.recusada", "avisa o motivo e a tela treme", (d) => {
+        // Etapa 4: a recusa avisa e anima só esta aba, sem atualizar o estado da vila.
+        ouvir("operacao.recusada", "mostra o motivo da recusa somente a quem pediu", (d) => {
           avisar(d.motivo, "erro");
           jogo.recusado(d.motivo);
         });
-
-        // ETAPA 5: ouvir "recurso.produzido"     -> jogo.recursoProduzido(...)
-        ouvir("recurso.produzido", "atualiza as toras e mostra o +N", (d) => {
+        ouvir("construcao.iniciada", "atualiza sal e salineiros e mostra o canteiro", (d) => {
           atualizar(d);
-          jogo.recursoProduzido(d.estado);
+          avisar(d.por + " iniciou uma unidade salineira", "ok");
+          jogo.obraIniciada(d.estado, d.construcao);
         });
-
-        //          e "construcao.concluida"      -> jogo.obraConcluida(...)
-        ouvir("construcao.concluida", "transforma o canteiro em casa", (d) => {
+        // Os temporizadores do servidor produzem os fatos; a tela apenas reage.
+        ouvir("recurso.produzido", "atualiza a água captada", (d) => {
           atualizar(d);
-          avisar("Obra de " + d.por + " concluída! A produção aumentou.", "ok");
-          jogo.obraConcluida(d.estado);
+          jogo.recursoProduzido(d.quantidade, "água");
         });
-
-        
-        // ETAPA 6: ouvir "vila.encerrada"        -> jogo.vilaEncerrada()
-        ouvir("vila.encerrada", "escurece a vila e bloqueia novas ações", (d) => {
+        ouvir("sal.refinado", "atualiza água, sal e proteção do novo lote", (d) => {
           atualizar(d);
-          avisar("Temporada encerrada.");
-          jogo.vilaEncerrada();
+          jogo.recursoProduzido(d.quantidade, "sal");
         });
-
+        ouvir("construcao.concluida", "mostra a unidade pronta, libera salineiro e atualiza produção", (d) => {
+          atualizar(d);
+          avisar("Unidade de " + d.por + " concluída! A produção aumentou.", "ok");
+          jogo.obraConcluida(d.estado, d.construcao);
+        });
+        ouvir("chuva.ocorrida", "anima a chuva e mostra a quantidade exposta", (d) => {
+          atualizar(d);
+          jogo.chuvaOcorrida();
+          avisar(d.estado.sal_exposto ? "Choveu sobre o sal exposto." : "Choveu: todo o sal estava protegido. Perda zero.");
+        });
+        ouvir("sal.perdido", "retira o sal exposto e atualiza a perda acumulada", (d) => {
+          atualizar(d);
+          jogo.salPerdido(d.quantidade);
+          avisar("A chuva levou " + d.quantidade + " de sal exposto. O depósito permaneceu protegido.", "erro");
+        });
+        ouvir("vila.encerrada", "mostra o fim da temporada, congela as obras e escurece a vila", (d) => {
+          atualizar(d);
+          avisar("Temporada encerrada. O estado final foi preservado.");
+          jogo.vilaEncerrada(d.estado);
+        });
+        socket.connect();
       }
 
       // ===== PEDIDOS (emit): o cliente PEDE algo ao servidor =====
       // pedir(evento)
       function abrirVila() {
+        // Pede a abertura; a fase só muda ao receber o fato do servidor.
         pedir("vila.abertura_solicitada");
       }
       function construir() {
-        // ETAPA 3: pedir "construcao.solicitada"
+        // Só o fato de aceitação desconta sal e desenha a obra nesta tela.
         pedir("construcao.solicitada");
       }
       function encerrarVila() {
-        // ETAPA 6: pedir "vila.encerramento_solicitado"
+        // O pedido não encerra localmente; todos aguardam o fato confirmado.
         pedir("vila.encerramento_solicitado");
       }
 
-      return { nome, papel, conectado, estado, avisos, eventosVisiveis, contadores, ocultarProducao, porMinuto,
+      return { nome, papel, conectado, erroConexao, estado, avisos, eventosVisiveis, contadores, ocultarProducao, porMinuto, previsaoChuva,
                entrar, abrirVila, construir, encerrarVila };
     }
   }).mount("#app");

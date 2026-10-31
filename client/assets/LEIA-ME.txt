@@ -23,3 +23,14 @@ CAMADAS DO MAPA
   decoracao    árvores, pedras, hortas, cerca (células vazias onde não há nada)
   pontos       (objetos) lote1 a lote6 = onde aparecem obras e casas
                           acampamento = de onde sobem os "+10"
+
+ADAPTAÇÃO SALINA — ETAPA 8
+========================
+O mapa vila.json agora utiliza tileset-salina.svg: peças 0 = areia,
+1 = caminho e 2 = mar. Camada decoracao vazia; objetos lote1 a lote6
+localizam unidades e deposito localiza o depósito fixo.
+Tanques, secagem, depósito, canteiros e chuva são formas desenhadas
+pelo código de client/index.html. SVG e formas criados para este
+projeto com auxílio do Codex, sem arte comercial externa.
+Os PNGs originais do kit acima estão preservados como referência,
+mas não são carregados pelo cenário atual.
