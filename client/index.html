@@ -452,11 +452,12 @@
           ", exposto " + e.sal_exposto + ", salineiros " + e.trabalhadores + "/" + e.limite);
         return partes.join(" · ");
       }
-      function registrar(sentido, nome, dados, reacao = "") {
+      function registrar(sentido, nome, dados, reacao = "", causa = "") {
         const tipo = /[._]solicitad[ao]$/.test(nome) ? "pedido" : (nome === "operacao.recusada" ? "recusa" : "fato");
         contadores[nome] = (contadores[nome] || 0) + 1;
         eventos.value.unshift({ hora: new Date().toLocaleTimeString(), sentido: sentido, nome, tipo,
-          causa: (dados && dados.causa) || "", dados: resumir(dados), reacao });
+          causa: causa || (dados && dados.causa) || "",
+          dados: resumir(dados) || (sentido === "enviado" ? "Sem dados adicionais" : ""), reacao });
         eventos.value = eventos.value.slice(0, 40);
       }
 
@@ -473,8 +474,9 @@
         });
       }
       // PEDIR (emit): registra o evento no painel e o envia ao servidor
-      function pedir(nome, dados) {
-        registrar("enviado", nome, dados);
+      function pedir(nome, causa, reacao, dados) {
+        // Causa e reação descrevem o clique no painel; não são dados do pedido.
+        registrar("enviado", nome, dados, reacao, causa);
         if (dados === undefined) socket.emit(nome); else socket.emit(nome, dados);
       }
 
@@ -548,18 +550,21 @@
       }
 
       // ===== PEDIDOS (emit): o cliente PEDE algo ao servidor =====
-      // pedir(evento)
+      // pedir(evento, causa, reação local, dados opcionais)
       function abrirVila() {
         // Pede a abertura; a fase só muda ao receber o fato do servidor.
-        pedir("vila.abertura_solicitada");
+        pedir("vila.abertura_solicitada", "Clique do Mestre em Abrir temporada",
+          "Envia o pedido de abertura e aguarda a confirmação ou recusa do servidor.");
       }
       function construir() {
         // Só o fato de aceitação desconta sal e desenha a obra nesta tela.
-        pedir("construcao.solicitada");
+        pedir("construcao.solicitada", "Clique do Jogador em Construir",
+          "Envia o pedido de construção e aguarda a confirmação ou recusa do servidor; mantém os recursos e o cenário até a resposta.");
       }
       function encerrarVila() {
         // O pedido não encerra localmente; todos aguardam o fato confirmado.
-        pedir("vila.encerramento_solicitado");
+        pedir("vila.encerramento_solicitado", "Clique do Mestre em Encerrar temporada",
+          "Envia o pedido de encerramento e aguarda a confirmação ou recusa do servidor.");
       }
 
       return { nome, papel, conectado, erroConexao, estado, avisos, eventosVisiveis, contadores, ocultarProducao, porMinuto, previsaoChuva,
