@@ -72,3 +72,13 @@ async def abrir_vila(sid, dados=None):
         return
     estado["fase"] = "aberta"
     await sio.emit("vila.iniciada", fato(pedido))   # para todos
+
+@sio.on("construcao.solicitada")
+async def construir(sid, dados=None):
+    pedido = "construcao.solicitada"
+    estado["toras"] -= CUSTO
+    estado["trabalhadores"] += 1
+    estado["em_obra"] += 1
+    nome = jogadores[sid]["nome"]
+    await sio.emit("construcao.iniciada", fato(pedido, por=nome))
+
