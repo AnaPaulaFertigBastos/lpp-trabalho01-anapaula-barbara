@@ -7,3 +7,4 @@ app = socketio.ASGIApp(sio, static_files={
 })
 
 # A partir da Etapa 1, adicione o seu código ABAIXO desta linha.
+
