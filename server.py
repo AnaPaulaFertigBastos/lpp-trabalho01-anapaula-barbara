@@ -132,3 +132,15 @@ async def obra(nome):
     estado["producao"] += 5       # cada obra concluída aumenta a produção
     causa = "construcao.iniciada (temporizador)"
     await sio.emit("construcao.concluida", fato(causa, por=nome))
+
+@sio.on("vila.encerramento_solicitado")
+async def encerrar_vila(sid, dados=None):
+    pedido = "vila.encerramento_solicitado"
+    if jogadores[sid]["papel"] != "mestre":
+        await recusar(sid, "Só o Mestre pode encerrar a temporada", pedido)
+        return
+    if estado["fase"] != "aberta":
+        await recusar(sid, "A temporada não está aberta", pedido)
+        return
+    estado["fase"] = "encerrada"
+    await sio.emit("vila.encerrada", fato(pedido))
