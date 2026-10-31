@@ -336,7 +336,19 @@
         });
 
         // ETAPA 5: ouvir "recurso.produzido"     -> jogo.recursoProduzido(...)
+        ouvir("recurso.produzido", "atualiza as toras e mostra o +N", (d) => {
+          atualizar(d);
+          jogo.recursoProduzido(d.estado);
+        });
+
         //          e "construcao.concluida"      -> jogo.obraConcluida(...)
+        ouvir("construcao.concluida", "transforma o canteiro em casa", (d) => {
+          atualizar(d);
+          avisar("Obra de " + d.por + " concluída! A produção aumentou.", "ok");
+          jogo.obraConcluida(d.estado);
+        });
+
+        
         // ETAPA 6: ouvir "vila.encerrada"        -> jogo.vilaEncerrada()
       }
 
