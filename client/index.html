@@ -5,7 +5,7 @@
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <title>Vila Salina</title>
   <style>
-    body { background: #f8f4ea; color: #183d44; font-family: system-ui, sans-serif; max-width: 580px; margin: 24px auto; padding: 0 12px; }
+    body { background: #f8f4ea; color: #183d44; font-family: system-ui, sans-serif; max-width: 1180px; margin: 24px auto; padding: 0 12px; }
     .cartao, .painel { background: #fffdf7; border: 1px solid #ccc; border-radius: 8px; padding: 12px; margin: 12px 0; }
     .painel p { margin: 6px 0; }
     button { padding: 8px 14px; margin-right: 6px; border-radius: 6px; border: 1px solid #888; cursor: pointer; }
@@ -15,7 +15,7 @@
     .avisos li.ok { background: #dfd; }
     .avisos li.erro { background: #fdd; }
     #jogo { margin: 12px 0; border-radius: 8px; overflow: hidden; line-height: 0; }
-    #jogo canvas { width: 100% !important; height: auto !important; image-rendering: pixelated; }
+    #jogo canvas { width: 100% !important; height: auto !important;  }
     .eventos { border: 1px solid #ccc; border-radius: 8px; padding: 10px; margin: 12px 0; background: #fafafa; }
     .eventos h2 { margin: 0 0 6px; font-size: 16px; }
     .eventos .legenda { font-size: 12px; margin: 4px 0 8px; }
@@ -35,6 +35,25 @@
     .badge.emit { background: #1976d2; }
     .badge.on { background: #2e7d32; }
     .chip { display: inline-block; background: #eee; border-radius: 10px; padding: 1px 8px; margin: 0 4px 4px 0; font-size: 11px; }
+    h1 { font-size: 36px; letter-spacing: -1.5px; margin-bottom: 6px; }
+    .subtitulo { color: #657971; margin-top: 0; }
+    .cabecalho { display:flex; justify-content:space-between; align-items:center; gap:16px; flex-wrap:wrap; }
+    .identidade { border:1px solid #cfdbcf; padding:10px 16px; border-radius:24px; background:#fffdf7; }
+    .recursos { display:grid; grid-template-columns:repeat(4,1fr); gap:12px; margin:22px 0 16px; }
+    .recurso { background:#fffdf7; border:1px solid #dce1d4; border-radius:16px; padding:16px 20px; }
+    .recurso small { display:block; color:#667c75; font-size:13px; }
+    .recurso strong { display:block; font-size:30px; margin:4px 0; }
+    .recurso.exposto { background:#fff1dc; border-color:#e4c798; }
+    .recurso span { font-size:12px; color:#667c75; }
+    .cenario { border:1px solid #c6d6ce; border-radius:20px; overflow:hidden; background:#e9dfc2; box-shadow:0 12px 32px #24433a13; }
+    .cenario-topo { display:flex; justify-content:space-between; flex-wrap:wrap; gap:8px; padding:14px 20px; background:#fffdf7; font-size:13px; }
+    #jogo { margin:0; border-radius:0; }
+    .legenda-mapa { display:flex; flex-wrap:wrap; gap:18px; padding:12px 20px; font-size:12px; background:#fffdf7; color:#526b61; }
+    .painel { border-color:#dce1d4; border-radius:16px; padding:18px 22px; }
+    button { background:#226358; color:white; border:0; padding:12px 20px; font-weight:600; margin-bottom:6px; box-shadow:0 3px 0 #154a40; }
+    button:hover { background:#174f46; } button:focus-visible { outline:3px solid #d99835; outline-offset:3px; }
+    .eventos .dados { overflow-wrap:anywhere; }
+    @media(max-width:680px) { .recursos { grid-template-columns:repeat(2,1fr); } h1 { font-size:28px; } .recurso { padding:12px; } }
     footer { margin-top: 32px; font-size: 13px; color: #666; }
   </style>
 </head>
@@ -52,11 +71,21 @@
 
   <!-- Tela da vila -->
   <main v-else>
-    <h1>🌊 Vila Salina</h1>
-    <p>{{ papel }}: <strong>{{ nome || "Anônimo" }}</strong> · Temporada: <strong>{{ estado.fase }}</strong></p>
+    <header class="cabecalho"><div><h1>Vila Salina</h1><p class="subtitulo">Do mar ao cristal · uma vila construída em conjunto</p></div>
+    <div class="identidade">{{ papel }} · <strong>{{ nome || "Anônimo" }}</strong> · {{ estado.fase }}</div></header>
+    <section class="recursos" aria-label="Estoques compartilhados">
+      <div class="recurso"><small>ÁGUA DO MAR</small><strong>{{ estado.agua_mar }}</strong><span>Reserva compartilhada</span></div>
+      <div class="recurso"><small>SAL PROTEGIDO</small><strong>{{ estado.sal_protegido }} <span>/ {{ estado.capacidade_deposito }}</span></strong><span>Dentro do depósito</span></div>
+      <div class="recurso exposto"><small>SAL EXPOSTO</small><strong>{{ estado.sal_exposto }}</strong><span>Ao ar livre · sujeito à chuva</span></div>
+      <div class="recurso"><small>SALINEIROS LIVRES</small><strong>{{ estado.limite - estado.trabalhadores }} <span>/ {{ estado.limite }}</span></strong><span>{{ estado.em_obra }} obras em andamento</span></div>
+    </section>
 
     <!-- A vila desenhada pelo Phaser aparece aqui -->
-    <div id="jogo"></div>
+    <section class="cenario" aria-label="Mapa da Salina">
+      <div class="cenario-topo"><strong>A SALINA · {{ estado.concluidas }} / {{ estado.limite_construcoes }} unidades prontas</strong><span>{{ previsaoChuva }}</span></div>
+      <div id="jogo"></div>
+      <div class="legenda-mapa"><span>▣ Azul: tanques de água</span><span>◇ Branco: cristais na secagem</span><span>⌂ Telhado: sal protegido</span><span>⚑ Laranja: obra em andamento</span></div>
+    </section>
 
     <section class="painel">
       <p>Água do mar: <strong>{{ estado.agua_mar }}</strong></p>
@@ -120,7 +149,7 @@
 <script>
   // =====================================================================
   //  Cenário da Salina: mapa Tiled e formas próprias para tanques e secagem.
-  //  O cenário é um MAPA (Tilemap) feito no Tiled: client/assets/vila.json.
+  //  Os pontos de construção vêm do mapa Tiled; a arte é desenhada por formas vetoriais.
   //  Cada método abaixo reage a UM evento do servidor.
   //  As animações apresentam fatos; não decidem produção ou perda.
   // =====================================================================
@@ -133,59 +162,113 @@
     class VilaScene extends Phaser.Scene {
       constructor() { super("vila"); }
 
-      preload() {
-        this.load.image("tiles", "assets/tileset-salina.svg");                 // peças do cenário
-        this.load.tilemapTiledJSON("mapa", "assets/vila.json");              // o mapa
-      }
-
+      preload() { this.load.tilemapTiledJSON("mapa", "assets/vila.json"); }
       create() {
-        // 1) o mapa: duas camadas de peças (chão e decoração)
-        const mapa = this.make.tilemap({ key: "mapa" });
-        const tileset = mapa.addTilesetImage("tileset-vila", "tiles");   // nome no Tiled, chave da imagem
-        mapa.createLayer("chao", tileset);
-        mapa.createLayer("decoracao", tileset);
-
-        // 2) pontos marcados no mapa: onde ficam as unidades e o depósito
+        const mapa = this.make.tilemap({key: "mapa"});
         const pontos = mapa.getObjectLayer("pontos").objects;
-        this.lotes = pontos.filter((p) => p.name.startsWith("lote"))
-          .sort((a, b) => a.name.localeCompare(b.name, "pt", { numeric: true }));
-        this.acampamento = pontos.find((p) => p.name === "deposito");
-        this.add.rectangle(28, 42, 42, 26, 0xb98754).setStrokeStyle(2, 0x735335);
-        this.add.rectangle(28, 43, 32, 16, 0xfffbef);
-        this.add.text(28, 62, "DEPÓSITO", {fontSize: "6px", resolution: 2, color: "#473422"}).setOrigin(0.5);
-        this.add.text(258, 68, "MAR", {fontSize: "8px", color: "#ffffff"}).setOrigin(0.5);
-        this.add.text(28, 118, "FRENTE BÁSICA", {fontSize: "6px", resolution: 2, color: "#473422"}).setOrigin(0.5);
-        this.desenharUnidade(28, 98);
-        for (const p of this.lotes) {
-          this.add.rectangle(p.x, p.y, 36, 28, 0xf7ead1).setStrokeStyle(1, 0xc5aa7a);
-          this.add.text(p.x, p.y + 21, "UNIDADE " + p.name.slice(4), {fontSize: "6px", resolution: 2, color: "#584326"}).setOrigin(0.5);
+        this.larg = 1100; this.alt = 640;
+        this.obras = []; this.casas = []; this.usados = 0;
+        this.lotes = pontos.filter(p=>p.name.startsWith("lote")).map(p=>({...p,n:Number(p.name.slice(4))})).sort((a,b)=>a.n-b.n);
+        this.acampamento = pontos.find(p=>p.name==="deposito");
+        const g = this.add.graphics();
+        g.fillStyle(0xe9ddba).fillRect(0,0,1100,640);
+        g.fillStyle(0xdfcfaa).fillRoundedRect(270,50,490,550,22);
+        // Ocean, shoreline and water intake channel.
+        g.fillStyle(0x449eaa).fillRect(865,0,235,640);
+        g.fillStyle(0x77c3c5).fillRect(840,0,30,640);
+        g.fillStyle(0xd1e3ce).fillRect(825,0,15,640);
+        for(let y=25;y<640;y+=36) {
+          g.lineStyle(2,0xa7d9d4,0.5).lineBetween(895+(y%3)*8,y,1020,y);
+          g.lineStyle(2,0xffffff,0.5).lineBetween(841,y,849,y+16);
         }
-        this.add.text(144, 136, "Cada unidade: tanque + secagem", {fontSize: "7px", resolution: 2, color: "#473422"}).setOrigin(0.5);
-
-        // 3) câmera: o mapa é pequeno (pixel art), então damos zoom 2x
-        this.cameras.main.setZoom(2).centerOn(mapa.widthInPixels / 2, mapa.heightInPixels / 2);
-        this.larg = mapa.widthInPixels;
-        this.alt = mapa.heightInPixels;
-
-        this.obras = [];      // obras em andamento (a primeira a começar é a primeira a terminar)
-        this.casas = [];
-        this.usados = 0;      // quantos lotes já foram usados
-        this.faixa = this.add.text(this.larg / 2, 9, "⏳ Aguardando o Mestre", {
-          fontSize: "8px", color: "#ffffff", backgroundColor: "#00000099",
-          padding: { x: 5, y: 2 }, resolution: 2,
-        }).setOrigin(0.5).setDepth(10);
-
+        g.fillStyle(0xc9b58c).fillRect(265,242,545,30).fillRect(265,417,545,30);
+        g.fillStyle(0x92c9c5).fillRect(790,76,22,510).fillRect(790,76,92,18);
+        g.lineStyle(3,0x597f78).strokeRect(790,76,22,510);
+        for(let i=0;i<95;i++) { g.fillStyle(0xbba67d,0.28).fillCircle((i*73)%820,(i*137)%640,1.5); }
+        this.etiqueta(978,145,"OCEANO",17,"#e0f6ed");
+        this.etiqueta(978,170,"Água do mar",12,"#d7eeee");
+        this.etiqueta(969,82,"≈",44,"#d4eeea");
+        this.etiqueta(800,40,"CAPTAÇÃO",10,"#406d67");
+        // Warehouse silhouette, open front and visibly stored sacks.
+        g.fillStyle(0x41564b,0.14).fillRoundedRect(38,132,203,113,8);
+        g.fillStyle(0xb88b56).fillRect(44,100,190,120);
+        g.fillStyle(0x775936).fillRect(56,126,166,94);
+        g.fillStyle(0x347263).fillTriangle(28,111,139,42,250,111);
+        g.lineStyle(5,0x24564c).lineBetween(28,111,139,42).lineBetween(139,42,250,111);
+        g.fillStyle(0xd5b381).fillRect(48,116,10,110).fillRect(220,116,10,110);
+        this.etiqueta(139,92,"ARMAZÉM",14,"#ffffff");
+        this.estoqueVisual = this.add.container(0,0);
+        this.rotuloProtegido = this.etiqueta(139,245,"",14,"#2e5546");
+        this.etiqueta(139,267,"Coberto · protegido da chuva",11,"#64735b");
+        // Outdoor stock is deliberately separated from the covered warehouse.
+        g.fillStyle(0xc6ad7c).fillRoundedRect(35,307,210,120,12);
+        g.lineStyle(2,0xb28c4c).strokeRoundedRect(35,307,210,120,12);
+        this.expostoVisual = this.add.container(0,0);
+        this.rotuloExposto = this.etiqueta(139,451,"",14,"#8a5726");
+        this.etiqueta(139,473,"Sem cobertura · risco de perda",11,"#8a6f47");
+        this.etiqueta(140,512,"FRENTE BÁSICA",12,"#406052");
+        this.desenharUnidade(140,552).setScale(0.58);
+        this.etiqueta(140,608,"Produção inicial sempre disponível",10,"#6e7c65");
+        this.rotulosLotes = [];
+        for(const p of this.lotes) {
+          g.fillStyle(0xf2e8cf).fillRoundedRect(p.x-96,p.y-64,192,140,10);
+          g.lineStyle(1,0xbeac87).strokeRoundedRect(p.x-96,p.y-64,192,140,10);
+          this.etiqueta(p.x,p.y-48,"ESPAÇO " + p.n,11,"#8a8067");
+          this.rotulosLotes.push(this.etiqueta(p.x,p.y+61,"Disponível para construir",10,"#8a8067"));
+        }
+        this.faixa = this.etiqueta(535,25,"Aguardando o Mestre",13,"#35594e").setDepth(10);
         cena = this;
-        fila.splice(0).forEach(([nome, args]) => this[nome](...args));
+        fila.splice(0).forEach(([nome,args])=>this[nome](...args));
+      }
+      etiqueta(x,y,texto,tamanho=12,cor="#37594e") {
+        return this.add.text(x,y,texto,{fontFamily:"Arial, sans-serif",fontSize:tamanho+"px",color:cor,resolution:2}).setOrigin(0.5);
+      }
+      atualizarEstoques(estado) {
+        this.estoqueVisual.removeAll(true); this.expostoVisual.removeAll(true);
+        const protegido = estado.sal_protegido || 0, exposto = estado.sal_exposto || 0;
+        // Symbols show stock presence; the labels give exact quantities.
+        for(let i=0;i<Math.ceil(protegido/10);i++) {
+          const x=83+(i%3)*52, y=196-Math.floor(i/3)*33;
+          const saco=this.add.graphics();
+          saco.fillStyle(0xd3bea0).fillRoundedRect(x-18,y-27,36,31,7);
+          saco.fillStyle(0xfbf9e8).fillRoundedRect(x-16,y-29,32,27,7);
+          saco.lineStyle(2,0xb8a889).lineBetween(x-10,y-24,x+10,y-24);
+          saco.fillStyle(0x87a094).fillRect(x-6,y-18,12,8);
+          this.estoqueVisual.add(saco);
+        }
+        for(let i=0;i<Math.min(6,Math.ceil(exposto/15));i++) {
+          const x=77+(i%3)*63,y=360+Math.floor(i/3)*45;
+          const monte=this.add.graphics();
+          monte.fillStyle(0x8e7c5e,0.2).fillEllipse(x,y+10,56,16);
+          monte.fillStyle(0xffffff).fillTriangle(x-27,y+9,x,y-24,x+27,y+9);
+          monte.fillStyle(0xdce7e1).fillTriangle(x,y-24,x+8,y+9,x+27,y+9);
+          this.expostoVisual.add(monte);
+        }
+        this.rotuloProtegido.setText(protegido+" / "+estado.capacidade_deposito+" sal protegido");
+        this.rotuloExposto.setText(exposto ? exposto+" sal exposto à chuva" : "Pátio sem sal exposto");
+        for(let i=0;i<this.rotulosLotes.length;i++) {
+          const obra=(estado.construcoes||[]).find(o=>o.espaco===i+1);
+          this.rotulosLotes[i].setText(!obra?"Disponível para construir":obra.situacao==="em_obra"?"Em obra · 1 salineiro ocupado":"Tanque + secagem · pronta");
+        }
       }
 
       // ----- apoio -----
       lote(i) { return this.lotes[i % this.lotes.length]; }
       desenharUnidade(x, y) {
-        const tanque = this.add.rectangle(-9, 0, 14, 22, 0x5cb8c6).setStrokeStyle(2, 0x708b87);
-        const secagem = this.add.rectangle(9, 0, 14, 22, 0xf6f6ed).setStrokeStyle(2, 0xb79b6a);
-        const sal = this.add.triangle(9, 2, 0, 8, 5, 0, 10, 8, 0xffffff);
-        return this.add.container(x, y, [tanque, secagem, sal]);
+        const g = this.add.graphics();
+        g.fillStyle(0x988967,0.2).fillRoundedRect(-83,-20,166,69,5);
+        g.fillStyle(0x8f9f8b).fillRoundedRect(-83,-30,78,69,5);
+        g.fillStyle(0x4cabb5).fillRect(-77,-24,66,55);
+        g.lineStyle(2,0x9fdfdf).lineBetween(-70,-10,-22,-10).lineBetween(-65,7,-18,7);
+        g.fillStyle(0xa5b7a0).fillRect(-88,-7,13,9);
+        g.fillStyle(0xb39768).fillRoundedRect(5,-30,78,69,5);
+        g.fillStyle(0xe3d9bb).fillRect(11,-24,66,55);
+        for(let i=0;i<3;i++) {
+          g.fillStyle(0xffffff).fillTriangle(14+i*19,22,24+i*19,-9,35+i*19,22);
+          g.fillStyle(0xd2e0db).fillTriangle(24+i*19,-9,27+i*19,22,35+i*19,22);
+        }
+        const a=this.etiqueta(-44,48,"TANQUE",9,"#397b84"), b=this.etiqueta(44,48,"SECAGEM",9,"#7f6f50");
+        return this.add.container(x,y,[g,a,b]);
       }
       criarCasa(x, y) {
         const casa = this.desenharUnidade(x, y);
@@ -194,11 +277,14 @@
       }
       criarObra(duracao, construcao = null) {
         const { x, y } = this.lote(construcao ? construcao.espaco - 1 : this.usados++);
-        const base = this.add.rectangle(0, 0, 32, 22, 0xd0ae75).setStrokeStyle(2, 0x8b6636);
-        const sinal = this.add.text(0, 0, "OBRA", {fontSize: "7px", resolution: 2, color: "#513819"}).setOrigin(0.5);
+        const base = this.add.graphics();
+        base.fillStyle(0xa9946b).fillRect(-80,-28,160,60);
+        base.lineStyle(5,0xd4a45b).strokeRect(-69,-35,138,63).lineBetween(-69,-35,69,28).lineBetween(69,-35,-69,28);
+        base.fillStyle(0xefb555).fillTriangle(-84,34,-75,14,-66,34).fillTriangle(66,34,75,14,84,34);
+        const sinal = this.add.text(0, 0, "OBRA", {fontSize: "13px", resolution: 2, color: "#513819", backgroundColor: "#ffe4aa"}).setOrigin(0.5);
         const canteiro = this.add.container(x, y, [base, sinal]);
-        const fundo = this.add.rectangle(x - 10, y + 16, 20, 3, 0x333333).setOrigin(0, 0.5);
-        const barra = this.add.rectangle(x - 10, y + 16, 20, 3, 0xffd54a).setOrigin(0, 0.5);
+        const fundo = this.add.rectangle(x - 70, y + 43, 140, 6, 0x333333).setOrigin(0, 0.5);
+        const barra = this.add.rectangle(x - 70, y + 43, 140, 6, 0xffd54a).setOrigin(0, 0.5);
         const restante = construcao ? Math.max(0, construcao.conclusao_prevista * 1000 - Date.now()) : duracao;
         barra.scaleX = duracao ? Math.max(0, Math.min(1, 1 - restante / duracao)) : 1;
         if (restante > 0) this.tweens.add({ targets: barra, scaleX: 1, duration: restante });
@@ -206,10 +292,10 @@
       }
       flutuar(texto, x, y, cor) {
         const t = this.add.text(x, y, texto, {
-          fontSize: "8px", color: cor, fontStyle: "bold", stroke: "#ffffff",
+          fontSize: "16px", color: cor, fontStyle: "bold", stroke: "#ffffff",
           strokeThickness: 2, resolution: 2,
         }).setOrigin(0.5).setDepth(8);
-        this.tweens.add({ targets: t, y: y - 16, alpha: 0, duration: 1400, onComplete: () => t.destroy() });
+        this.tweens.add({ targets: t, y: y - 30, alpha: 0, duration: 1400, onComplete: () => t.destroy() });
       }
 
       // ----- um método para cada evento do servidor -----
@@ -223,6 +309,7 @@
         this.casas = [];
         this.obras = [];
         this.usados = 0;
+        this.atualizarEstoques(estado);
         for (const construcao of estado.construcoes || []) {
           if (construcao.situacao === "em_obra") this.criarObra(estado.tempo_obra * 1000, construcao);
           else {
@@ -251,19 +338,19 @@
         this.flutuar("Unidade pronta!", obra.x, obra.y - 18, "#1b5e20");
       }
       recursoProduzido(quantidade, recurso) {
-        this.flutuar("+" + quantidade + " " + recurso, recurso === "água" ? 255 : 35, 80, "#1b5e20");
+        this.flutuar("+" + quantidade + " " + recurso, recurso === "água" ? 970 : 140, recurso === "água" ? 230 : 300, "#1b5e20");
       }
       chuvaOcorrida() {
         // Efeito breve: a chuva é instantânea nas regras, sem pausar a produção.
         const gotas = this.add.graphics().setDepth(6);
         gotas.lineStyle(1, 0x547da8, 0.8);
-        for (let x = 4; x < this.larg; x += 12) {
-          for (let y = 0; y < this.alt; y += 22) gotas.lineBetween(x, y, x - 3, y + 8);
+        for (let x = 4; x < this.larg; x += 24) {
+          for (let y = 0; y < this.alt; y += 32) gotas.lineBetween(x, y, x - 3, y + 8);
         }
         this.tweens.add({targets: gotas, y: 12, alpha: 0, duration: 1400, onComplete: () => gotas.destroy()});
       }
       salPerdido(quantidade) {
-        this.flutuar("Chuva: -" + quantidade + " sal exposto", this.larg / 2, 80, "#b00020");
+        this.flutuar("Chuva: -" + quantidade + " sal exposto", 140, 395, "#b00020");
       }
       recusado(motivo) {                      // operacao.recusada (só quem pediu)
         this.cameras.main.shake(180, 0.006);
@@ -289,10 +376,11 @@
       iniciar(idContainer) {
         if (partida) return;
         partida = new Phaser.Game({
-          type: Phaser.AUTO, parent: idContainer, width: 576, height: 288,
-          pixelArt: true, backgroundColor: "#ead7ac", scene: VilaScene, audio: { noAudio: true },
+          type: Phaser.AUTO, parent: idContainer, width: 1100, height: 640,
+          antialias: true, backgroundColor: "#ead7ac", scene: VilaScene, audio: { noAudio: true },
         });
       },
+      atualizarEstoques: (...a) => chamar("atualizarEstoques", ...a),
       mostrarEstado: (...a) => chamar("mostrarEstado", ...a),
       vilaIniciada: (...a) => chamar("vilaIniciada", ...a),
       obraIniciada: (...a) => chamar("obraIniciada", ...a),
@@ -351,6 +439,7 @@
       function atualizar(d) {
         agora.value = Date.now();
         Object.assign(estado, d.estado);   // copia o estado enviado pelo servidor
+        jogo.atualizarEstoques(d.estado);
       }
 
       // ----- painel de eventos (já pronto) -----

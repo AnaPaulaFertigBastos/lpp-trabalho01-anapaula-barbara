@@ -34,3 +34,11 @@ pelo código de client/index.html. SVG e formas criados para este
 projeto com auxílio do Codex, sem arte comercial externa.
 Os PNGs originais do kit acima estão preservados como referência,
 mas não são carregados pelo cenário atual.
+
+REVISÃO VISUAL
+O cenário atual usa a camada de objetos pontos de vila.json para
+posicionar as seis unidades; as camadas de peças ficaram vazias.
+A arte ampliada é vetorial, desenhada pelo Phaser em index.html.
+Os sacos representam sal protegido e os montes o excedente exposto.
+Rótulos informam os valores exatos; símbolos são limitados para caber.
+O tileset-salina.svg fica preservado como referência da versão anterior.
