@@ -101,6 +101,15 @@
       <p>Duração de cada obra: {{ estado.tempo_obra }}s.</p>
     </section>
 
+    <section class="painel" aria-label="Entregas coletivas">
+      <h2>Entregas da vila: {{ estado.entregas }}</h2>
+      <p>Conclua as seis unidades e envie um lote para liberar os espaços e começar outro ciclo.</p>
+      <p>Preparação do próximo lote: <strong>{{ estado.concluidas }}/{{ estado.limite_construcoes }}</strong> unidades concluídas.</p>
+      <p v-if="estado.ultima_entrega">Última entrega: nº {{ estado.ultima_entrega.numero }}, solicitada por {{ estado.ultima_entrega.por }}. Resultado coletivo da vila.</p>
+      <button v-if="papel === 'jogador'" @click="enviarLote">Enviar lote</button>
+      <p>O envio preserva o estoque de sal e retorna a produção a 5 por ciclo. Complete novamente os seis espaços para outra entrega.</p>
+    </section>
+
     <section>
       <template v-if="papel === 'mestre'">
         <button @click="abrirVila">Abrir temporada</button>
@@ -407,7 +416,7 @@
       const conectado = ref(false);
       const erroConexao = ref("");
       const estado = reactive({
-        fase: "aguardando", agua_mar: 0, sal: 0, sal_protegido: 0, sal_exposto: 0,
+        fase: "aguardando", entregas: 0, ultima_entrega: null, agua_mar: 0, sal: 0, sal_protegido: 0, sal_exposto: 0,
         sal_perdido: 0, capacidade_deposito: 0, trabalhadores: 0, limite: 0,
         captacao: 0, consumo_agua: 0, intervalo_chuva: 0, limite_construcoes: 0,
         producao: 0, intervalo: 0, tempo_obra: 0, custo: 0, concluidas: 0, em_obra: 0,
@@ -449,7 +458,7 @@
         const partes = Object.entries(resto).map(([k, v]) => k + ": " +
           (typeof v === "object" ? JSON.stringify(v) : v));
         if (e) partes.push("água " + e.agua_mar + ", sal " + e.sal + ", protegido " + e.sal_protegido +
-          ", exposto " + e.sal_exposto + ", salineiros " + e.trabalhadores + "/" + e.limite);
+          ", exposto " + e.sal_exposto + ", salineiros " + e.trabalhadores + "/" + e.limite + ", entregas " + e.entregas);
         return partes.join(" · ");
       }
       function registrar(sentido, nome, dados, reacao = "", causa = "") {
@@ -541,6 +550,11 @@
           jogo.salPerdido(d.quantidade);
           avisar("A chuva levou " + d.quantidade + " de sal exposto. O depósito permaneceu protegido.", "erro");
         });
+        ouvir("lote.enviado", "atualiza as entregas coletivas, libera os seis espaços e restaura a produção básica", (d) => {
+          atualizar(d);
+          jogo.mostrarEstado(d.estado);
+          avisar("Lote enviado! Os espaços estão disponíveis para um novo ciclo. Entregas da vila: " + d.estado.entregas, "ok");
+        });
         ouvir("vila.encerrada", "mostra o fim da temporada, congela as obras e escurece a vila", (d) => {
           atualizar(d);
           avisar("Temporada encerrada. O estado final foi preservado.");
@@ -561,6 +575,10 @@
         pedir("construcao.solicitada", "Clique do Jogador em Construir",
           "Envia o pedido de construção e aguarda a confirmação ou recusa do servidor; mantém os recursos e o cenário até a resposta.");
       }
+      function enviarLote() {
+        pedir("lote.envio_solicitado", "Clique do Jogador em Enviar lote",
+          "Solicita o envio coletivo e aguarda confirmação ou recusa; preserva as construções e o contador até a resposta.");
+      }
       function encerrarVila() {
         // O pedido não encerra localmente; todos aguardam o fato confirmado.
         pedir("vila.encerramento_solicitado", "Clique do Mestre em Encerrar temporada",
@@ -568,7 +586,7 @@
       }
 
       return { nome, papel, conectado, erroConexao, estado, avisos, eventosVisiveis, contadores, ocultarProducao, porMinuto, previsaoChuva,
-               entrar, abrirVila, construir, encerrarVila };
+               entrar, abrirVila, construir, enviarLote, encerrarVila };
     }
   }).mount("#app");
 </script>

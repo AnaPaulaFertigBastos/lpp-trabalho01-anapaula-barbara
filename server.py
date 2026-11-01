@@ -32,6 +32,8 @@ estado = {
     "limite": 2,
     "limite_construcoes": 6,
     "concluidas": 0,
+    "entregas": 0,
+    "ultima_entrega": None,
     "em_obra": 0,
     "captacao": 10,
     "consumo_agua": 10,
@@ -208,6 +210,37 @@ async def construir(sid, dados=None):
     # Confirma a obra para todos; o relógio da vila cuidará da conclusão.
     await sio.emit("construcao.iniciada", fato(pedido, por=participante["nome"],
                                               construcao=deepcopy(obra)))
+
+
+@sio.on("lote.envio_solicitado")
+@serializado
+async def enviar_lote(sid, dados=None):
+    # O mesmo bloqueio de construção e encerramento impede enviar um ciclo duas vezes.
+    pedido = "lote.envio_solicitado"
+    participante = jogadores.get(sid)
+    if participante is None:
+        motivo = "Participante não identificado"
+    elif participante["papel"] != "jogador":
+        motivo = "Somente Jogadores podem enviar lotes"
+    elif estado["fase"] != "aberta":
+        motivo = "A temporada não está aberta"
+    elif (len(estado["construcoes"]) != estado["limite_construcoes"]
+          or any(o["situacao"] != "concluida" for o in estado["construcoes"])):
+        motivo = "Conclua as seis unidades para enviar um lote"
+    else:
+        motivo = None
+    if motivo:
+        await recusar(sid, motivo, pedido)
+        return
+
+    # Confirma o ciclo antes de emitir: os próximos pedidos verão espaços vazios.
+    estado["entregas"] += 1
+    estado["ultima_entrega"] = {"numero": estado["entregas"], "por": participante["nome"],
+                                "enviada_em": time()}
+    estado["construcoes"] = []
+    estado.update(concluidas=0, em_obra=0, trabalhadores=0,
+                  captacao=10, consumo_agua=10, producao=5)
+    await sio.emit("lote.enviado", fato(pedido, entrega=deepcopy(estado["ultima_entrega"])))
 
 
 def proximo_prazo():
