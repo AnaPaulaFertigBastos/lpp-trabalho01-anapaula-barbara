@@ -19,8 +19,8 @@ O painel exibe contadores por nome de evento, incluindo pedidos enviados e fatos
 Nos pedidos de abertura, construção e encerramento, o painel identifica o clique como causa e descreve a reação local: enviar a intenção e aguardar confirmação ou recusa do servidor. Pedidos sem conteúdo exibem “Sem dados adicionais”. Essas descrições pertencem ao histórico da tela e não alteram os dados enviados ao servidor.
 
 ## Integrantes
-- Integrante 1: nome e @usuario-github a preencher.
-- Integrante 2: nome e @usuario-github a preencher.
+- Integrante 1: Ana Paula Fertig Bastos e @AnaPaulaFertigBastos.
+- Integrante 2: Bárbara Cristina Kammer e @BarbaraKammer.
 
 ## Como instalar e executar
 Pré-requisito: Python 3 instalado. Execute os comandos abaixo no PowerShell, dentro da pasta `salina`.
